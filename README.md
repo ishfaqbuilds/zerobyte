@@ -11,7 +11,7 @@ A single-page animated showcase of Team Zero Byte's drone project and the people
 
 ## Run it
 
-It is one static file with no build step. Open `index.html` in a browser, or serve the folder:
+It is one static file with no build step. Serve the folder (the page loads `content.json`, so opening the file directly will not work):
 
 ```bash
 python3 -m http.server 8000
@@ -21,13 +21,17 @@ Then visit http://localhost:8000. An internet connection is needed: three.js and
 
 ## Edit the content
 
-Everything is in `index.html`:
+All text, stats, features and team members live in `content.json`. Edit them from the admin page:
 
-- **Team and features** — the `team` and `features` lists at the top of the first `<script>`. Add `role: "..."` or `img: "photo.jpg"` to a team member.
-- **Stats** — the `data-count` values in the `.stats` block.
-- **360° part labels** — the `.callout` blocks in the `#explore` section.
+**https://ishfaqbuilds.github.io/zerobyte/admin/**
 
-The stats, features and part labels are currently placeholders and should be replaced with the drone's real specs.
+1. Create a fine-grained GitHub token (GitHub → Settings → Developer settings → Fine-grained tokens) limited to this repository with **Contents: Read and write**.
+2. Paste it into the admin page, make your changes, upload photos, and press **Save changes**.
+3. The live site updates in about a minute.
+
+Anyone can open the admin page, but only someone with write access to this repository and their own token can save. The token stays in the browser tab and is sent only to GitHub.
+
+The stats, features and 360° part labels are currently placeholders and should be replaced with the drone's real specs.
 
 ## Team
 

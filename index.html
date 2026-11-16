@@ -99,6 +99,7 @@ nav .btn{padding:8px 16px}
 .avatar{width:84px;height:84px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;font-size:1.6rem;font-weight:700;color:#111;background:var(--acc);transition:transform .4s}
 .member:hover .avatar{transform:rotate(-8deg) scale(1.1)}
 .member img.avatar{object-fit:cover}
+.member .role{color:var(--acc);font-size:.85rem;margin-bottom:6px}
 
 /* landing */
 .landing{text-align:center;padding-bottom:60px}
@@ -130,12 +131,9 @@ footer{text-align:center;color:var(--mute);padding:40px 20px;border-top:1px soli
 
 <section class="hero">
   <div class="hero-text">
-    <span class="tag fade">Our drone project</span>
-    <h1>
-      <span class="w"><i style="--d:0">Built</i></span> <span class="w"><i style="--d:1">to</i></span> <span class="w"><i style="--d:2">fly.</i></span><br>
-      <span class="w"><i style="--d:3"><em>Built</em></i></span> <span class="w"><i style="--d:4"><em>by</em></i></span> <span class="w"><i style="--d:5"><em>us.</em></i></span>
-    </h1>
-    <p class="mute fade">A quadcopter designed, wired, coded and test-flown by Team Zero Byte — from the first sketch to the first stable hover.</p>
+    <span class="tag fade" id="hero-tag"></span>
+    <h1 id="hero-h1"></h1>
+    <p class="mute fade" id="hero-text"></p>
     <div class="fade"><a class="btn" href="#about">Explore the build</a><a class="btn ghost" href="#team">The team</a></div>
   </div>
   <div class="stage"><div class="pad"></div><div class="shadow"></div></div>
@@ -153,16 +151,10 @@ footer{text-align:center;color:var(--mute);padding:40px 20px;border-top:1px soli
     <div class="reveal right">
       <span class="tag">About the project</span>
       <h2>Engineered for performance.<br>Designed for <em>adventure.</em></h2>
-      <p class="mute">We set out to build a drone that is stable, smart and simple to fly. Every part — the frame, the flight controller tuning, the camera mount — was chosen, tested and refined by the team.</p>
+      <p class="mute" id="about-text"></p>
     </div>
   </div>
-  <!-- EDIT: replace with your real numbers -->
-  <div class="stats">
-    <div class="reveal" style="--i:0"><b data-count="25">0</b><small>min flight time</small></div>
-    <div class="reveal" style="--i:1"><b data-count="60">0</b><small>km/h top speed</small></div>
-    <div class="reveal" style="--i:2"><b data-count="2">0</b><small>km control range</small></div>
-    <div class="reveal" style="--i:3"><b data-count="900">0</b><small>g take-off weight</small></div>
-  </div>
+  <div class="stats" id="stats"></div>
 </section>
 
 <section id="explore">
@@ -171,7 +163,6 @@ footer{text-align:center;color:var(--mute);padding:40px 20px;border-top:1px soli
     <h2>Explore every detail. <em>Keep scrolling.</em></h2>
     <div class="ring"></div>
     <div class="deg" id="deg">0°</div>
-    <!-- EDIT: replace with your real parts -->
     <div class="callout c1"><h3>Brushless motors</h3><p>Four motors with two-blade props for lift and fast response.</p></div>
     <div class="callout c2"><h3>Stabilised camera</h3><p>Nose-mounted gimbal keeps footage level in flight.</p></div>
     <div class="callout c3"><h3>Lightweight frame</h3><p>Stiff X-layout arms and landing skids.</p></div>
@@ -201,36 +192,12 @@ footer{text-align:center;color:var(--mute);padding:40px 20px;border-top:1px soli
   <a class="btn reveal" href="#">Fly again ↑</a>
 </section>
 
-<footer>© 2026 Team Zero Byte · Drone Project</footer>
+<footer id="footer"></footer>
 
 <script>
-// EDIT: your features and team members. Add `role: "..."` or `img: "photo.jpg"` to a member.
-const features = [
-  ["Stable hover", "Tuned PID loops keep the drone locked in place, even in a breeze."],
-  ["GPS position hold", "Return-to-home and waypoint flight from onboard GPS."],
-  ["Stabilised camera", "A gimbal-mounted camera for smooth aerial footage."],
-  ["Custom frame", "Lightweight frame designed and assembled in-house."],
-  ["Live telemetry", "Battery, altitude and signal streamed to the ground in real time."],
-  ["Fail-safes", "Low-battery and signal-loss protection bring it home safely."],
-];
-const team = [
-  { name: "Mohammad Ishfaqul Islam" },
-  { name: "MD. Arifur Rahman" },
-  { name: "Sayeed Omar" },
-  { name: "Sayeed Abrar Aqil" },
-  { name: "Thasinur Mohian" },
-  { name: "Alim Shahriar" },
-  { name: "MD. Minhaz Uddin" },
-];
-
+// All text and the team list come from content.json (edit it at /admin).
 const $ = id => document.getElementById(id);
-$("feature-grid").innerHTML = features.map(([t, d], i) =>
-  `<div class="card reveal flip" style="--i:${i % 3}"><i>0${i + 1}</i><h3>${t}</h3><p>${d}</p></div>`).join("");
-$("team-grid").innerHTML = team.map((m, i) => {
-  const initials = m.name.split(" ").map(w => w[0]).join("").slice(0, 2);
-  const avatar = m.img ? `<img class="avatar" src="${m.img}" alt="${m.name}">` : `<div class="avatar">${initials}</div>`;
-  return `<div class="card member reveal zoom" style="--i:${i % 4}">${avatar}<h3>${m.name}</h3><p>${m.role || "Team Zero Byte"}</p></div>`;
-}).join("");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 // reveal on scroll + count-up stats
 const io = new IntersectionObserver(entries => entries.forEach(e => {
@@ -240,15 +207,44 @@ const io = new IntersectionObserver(entries => entries.forEach(e => {
   setTimeout(() => e.target.style.removeProperty("--i"), 1500); // drop stagger delay so hover is instant
   const b = e.target.querySelector("[data-count]");
   if (!b) return;
-  const end = +b.dataset.count, t0 = performance.now();
+  const end = +b.dataset.count, dp = (b.dataset.count.split(".")[1] || "").length, t0 = performance.now();
   const tick = t => {
     const p = Math.min((t - t0) / 1200, 1);
-    b.textContent = Math.round(end * (1 - (1 - p) ** 3));
+    b.textContent = (end * (1 - (1 - p) ** 3)).toFixed(dp);
     if (p < 1) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
 }), { threshold: .2 });
-document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+const observe = () => document.querySelectorAll(".reveal:not(.in)").forEach(el => io.observe(el));
+
+function render(c) {
+  let d = 0;
+  const words = (line, accent) => esc(line).split(" ").map(w =>
+    `<span class="w"><i style="--d:${d++}">${accent ? `<em>${w}</em>` : w}</i></span>`).join(" ");
+  $("hero-tag").textContent = c.hero.tag;
+  $("hero-h1").innerHTML = words(c.hero.line1) + "<br>" + words(c.hero.line2, true);
+  $("hero-text").textContent = c.hero.text;
+  $("about-text").textContent = c.about.text;
+  $("footer").textContent = c.footer;
+  $("stats").innerHTML = c.stats.map((s, i) => {
+    const num = s.value !== "" && !isNaN(s.value);
+    return `<div class="reveal" style="--i:${i}"><b ${num ? `data-count="${esc(s.value)}"` : ""}>${num ? 0 : esc(s.value)}</b><small>${esc(s.label)}</small></div>`;
+  }).join("");
+  document.querySelectorAll("#explore .callout").forEach((el, i) => {
+    const p = c.parts[i];
+    el.hidden = !p;
+    if (p) el.innerHTML = `<h3>${esc(p.title)}</h3><p>${esc(p.text)}</p>`;
+  });
+  $("feature-grid").innerHTML = c.features.map((f, i) =>
+    `<div class="card reveal flip" style="--i:${i % 3}"><i>${String(i + 1).padStart(2, "0")}</i><h3>${esc(f.title)}</h3><p>${esc(f.text)}</p></div>`).join("");
+  $("team-grid").innerHTML = c.team.map((m, i) => {
+    const initials = m.name.split(" ").map(w => w[0]).join("").slice(0, 2);
+    const avatar = m.img ? `<img class="avatar" src="${esc(m.img)}" alt="${esc(m.name)}">` : `<div class="avatar">${esc(initials)}</div>`;
+    return `<div class="card member reveal zoom" style="--i:${i % 4}">${avatar}<h3>${esc(m.name)}</h3>${m.role ? `<p class="role">${esc(m.role)}</p>` : ""}${m.bio ? `<p>${esc(m.bio)}</p>` : ""}</div>`;
+  }).join("");
+  observe();
+}
+fetch("content.json", { cache: "no-cache" }).then(r => r.json()).then(render).catch(observe);
 
 // scroll-linked: progress bar, hero parallax, text band, 360° callouts
 const hero = document.querySelector(".hero"), ex = $("explore"), calls = [...ex.querySelectorAll(".callout")];

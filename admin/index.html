@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Zero Byte — Admin</title>
+<style>
+:root{--bg:#0b0c0e;--card:#15171b;--line:#2b2f36;--fg:#f3f1ec;--mute:#9a9da3;--acc:#ff5a1f}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif;padding-bottom:90px}
+a{color:var(--acc)}
+em{font-style:normal;color:var(--acc)}
+header,main{max-width:760px;margin:0 auto;padding:20px 16px}
+header{display:flex;justify-content:space-between;align-items:center;font-size:1.2rem}
+header a{font-size:.9rem}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:18px}
+.box h2{font-size:1.1rem;margin-bottom:12px}
+.hint{color:var(--mute);font-size:.88rem;margin-bottom:12px}
+label{display:block;margin-bottom:12px}
+label span{display:block;color:var(--mute);font-size:.8rem;margin-bottom:4px;text-transform:capitalize}
+input:not([type=file]),textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit}
+textarea{min-height:70px;resize:vertical}
+input:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:1px}
+.item{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{background:none;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 13px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.main{background:var(--acc);border-color:var(--acc);color:#111;font-weight:700;padding:10px 22px}
+button:disabled{opacity:.5;cursor:wait}
+.photo{width:64px;height:64px;border-radius:50%;object-fit:cover;background:var(--bg);border:1px solid var(--line)}
+.bar{position:fixed;inset:auto 0 0 0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px;display:flex;justify-content:center;align-items:center;gap:16px}
+#msg{font-size:.9rem;color:var(--mute)}
+#msg.err{color:#ff6b6b}
+</style>
+</head>
+<body>
+<header><b>Zero <em>Byte</em> admin</b><a href="../">View site ↗</a></header>
+<main>
+  <section class="box">
+    <h2>GitHub access token</h2>
+    <p class="hint">Needed to save. Create a fine-grained token at GitHub → Settings → Developer settings, limited to the <b>zerobyte</b> repository with <b>Contents: Read and write</b>. It is kept only in this browser tab and sent only to GitHub.</p>
+    <input type="password" id="token" autocomplete="off" placeholder="github_pat_…" aria-label="GitHub access token">
+  </section>
+  <div id="form"><p class="hint">Loading content…</p></div>
+</main>
+<div class="bar"><span id="msg" role="status"></span><button class="main" id="save">Save changes</button></div>
+
+<script>
+const REPO = "ishfaqbuilds/zerobyte", BRANCH = "main";
+const API = `https://api.github.com/repos/${REPO}/contents/`;
+const TITLES = { hero: "Hero", about: "About", stats: "Stats", parts: "360° view labels", features: "Features", team: "Team members", footer: "Footer" };
+const LABELS = { tag: "small tag", line1: "headline line 1", line2: "headline line 2 (orange)", img: "photo", bio: "description", footer: "footer text" };
+const BLANK = { stats: { value: "", label: "" }, features: { title: "", text: "" }, team: { name: "", role: "", bio: "", img: "" } }; // lists you can add to / remove from
+
+const $ = id => document.getElementById(id);
+const el = (tag, props) => Object.assign(document.createElement(tag), props);
+const btn = (text, onclick) => el("button", { type: "button", textContent: text, onclick });
+const say = (text, err) => { $("msg").textContent = text; $("msg").className = err ? "err" : ""; };
+const enc = s => btoa(Array.from(new TextEncoder().encode(s), b => String.fromCharCode(b)).join(""));
+const dec = b64 => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, "")), c => c.charCodeAt(0)));
+
+let data, uploads = {}, previews = {};   // uploads: new photos waiting to be saved (path -> base64)
+$("token").value = sessionStorage.zbToken || "";
+
+function gh(path, opts = {}) {
+  const token = $("token").value.trim();
+  return fetch(API + path + (opts.method ? "" : `?ref=${BRANCH}`), {
+    cache: "no-store", ...opts,
+    headers: { Accept: "application/vnd.github+json", ...(token && { Authorization: `Bearer ${token}` }) },
+  });
+}
+async function put(path, body) {
+  const r = await gh(path, { method: "PUT", body: JSON.stringify({ branch: BRANCH, ...body }) });
+  if (r.ok) return;
+  throw new Error(r.status === 401 ? "GitHub rejected the token." :
+    r.status === 403 || r.status === 404 ? "This token cannot write to the zerobyte repository." :
+    r.status === 409 ? "Someone else saved just now. Reload the page and try again." : `GitHub error ${r.status}.`);
+}
+
+function photoField(obj) {
+  const wrap = el("div", { className: "row" }), img = el("img", { className: "photo", alt: "" });
+  const show = () => { img.src = previews[obj.img] || (obj.img ? "../" + obj.img : ""); img.style.visibility = obj.img ? "" : "hidden"; };
+  const file = el("input", { type: "file", accept: "image/*" });
+  file.onchange = async () => {
+    if (!file.files[0]) return;
+    try {
+      // shrink to 600px JPEG so photos stay small in the repository
+      const bmp = await createImageBitmap(file.files[0]), k = Math.min(1, 600 / Math.max(bmp.width, bmp.height));
+      const cv = el("canvas", { width: bmp.width * k, height: bmp.height * k });
+      cv.getContext("2d").drawImage(bmp, 0, 0, cv.width, cv.height);
+      const url = cv.toDataURL("image/jpeg", .85), path = `images/${Date.now()}.jpg`;
+      uploads[path] = url.split(",")[1]; previews[path] = url; obj.img = path; show();
+    } catch { say("That file could not be read as an image.", true); }
+  };
+  wrap.append(img, file, btn("Remove photo", () => { obj.img = ""; file.value = ""; show(); }));
+  show();
+  return wrap;
+}
+function field(obj, key) {
+  const wrap = el("label");
+  wrap.append(el("span", { textContent: LABELS[key] || key }));
+  if (key === "img") { wrap.append(photoField(obj)); return wrap; }
+  const input = el(key === "text" || key === "bio" ? "textarea" : "input", { value: obj[key] });
+  input.oninput = () => obj[key] = input.value;
+  wrap.append(input);
+  return wrap;
+}
+function draw() {
+  $("form").replaceChildren();
+  for (const [key, value] of Object.entries(data)) {
+    const box = el("section", { className: "box" });
+    box.append(el("h2", { textContent: TITLES[key] || key }));
+    if (typeof value === "string") box.append(field(data, key));
+    else if (Array.isArray(value)) {
+      value.forEach((item, i) => {
+        const card = el("div", { className: "item" });
+        for (const f in item) card.append(field(item, f));
+        const row = el("div", { className: "row" });
+        if (i) row.append(btn("↑ Move up", () => { [value[i - 1], value[i]] = [value[i], value[i - 1]]; draw(); }));
+        if (BLANK[key]) row.append(btn("Remove", () => { value.splice(i, 1); draw(); }));
+        card.append(row); box.append(card);
+      });
+      if (BLANK[key]) box.append(btn("+ Add", () => { value.push({ ...BLANK[key] }); draw(); }));
+    } else for (const f in value) box.append(field(value, f));
+    $("form").append(box);
+  }
+}
+
+async function load() {
+  try {
+    // newest version straight from the repository; falls back to the published file
+    const r = await gh("content.json");
+    data = r.ok ? JSON.parse(dec((await r.json()).content)) : await (await fetch("../content.json", { cache: "no-store" })).json();
+    draw();
+  } catch { $("form").textContent = "Could not load the site content. Check your connection and reload."; }
+}
+
+async function save() {
+  if (!$("token").value.trim()) return say("Paste your GitHub token first.", true);
+  sessionStorage.zbToken = $("token").value.trim();
+  $("save").disabled = true; say("Saving…");
+  try {
+    const used = JSON.stringify(data);
+    for (const path of Object.keys(uploads)) {
+      if (used.includes(path)) await put(path, { message: `Add ${path}`, content: uploads[path] });
+      delete uploads[path];
+    }
+    const cur = await gh("content.json"), sha = cur.ok ? (await cur.json()).sha : undefined;
+    await put("content.json", { message: "Update site content from admin", content: enc(JSON.stringify(data, null, 2) + "\n"), sha });
+    say("Saved. The live site updates in about a minute.");
+  } catch (e) { say(e.message, true); }
+  $("save").disabled = false;
+}
+// ponytail: replaced or removed photos stay in the repo's images/ folder; delete them on GitHub if it ever gets cluttered.
+
+$("save").onclick = save;
+load();
+</script>
+</body>
+</html>

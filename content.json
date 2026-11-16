@@ -1,0 +1,41 @@
+{
+  "hero": {
+    "tag": "Our drone project",
+    "line1": "Built to fly.",
+    "line2": "Built by us.",
+    "text": "A quadcopter designed, wired, coded and test-flown by Team Zero Byte — from the first sketch to the first stable hover."
+  },
+  "about": {
+    "text": "We set out to build a drone that is stable, smart and simple to fly. Every part — the frame, the flight controller tuning, the camera mount — was chosen, tested and refined by the team."
+  },
+  "stats": [
+    { "value": "25", "label": "min flight time" },
+    { "value": "60", "label": "km/h top speed" },
+    { "value": "2", "label": "km control range" },
+    { "value": "900", "label": "g take-off weight" }
+  ],
+  "parts": [
+    { "title": "Brushless motors", "text": "Four motors with two-blade props for lift and fast response." },
+    { "title": "Stabilised camera", "text": "Nose-mounted gimbal keeps footage level in flight." },
+    { "title": "Lightweight frame", "text": "Stiff X-layout arms and landing skids." },
+    { "title": "GPS & battery", "text": "Top-mounted GPS and a rear slide-in battery pack." }
+  ],
+  "features": [
+    { "title": "Stable hover", "text": "Tuned PID loops keep the drone locked in place, even in a breeze." },
+    { "title": "GPS position hold", "text": "Return-to-home and waypoint flight from onboard GPS." },
+    { "title": "Stabilised camera", "text": "A gimbal-mounted camera for smooth aerial footage." },
+    { "title": "Custom frame", "text": "Lightweight frame designed and assembled in-house." },
+    { "title": "Live telemetry", "text": "Battery, altitude and signal streamed to the ground in real time." },
+    { "title": "Fail-safes", "text": "Low-battery and signal-loss protection bring it home safely." }
+  ],
+  "team": [
+    { "name": "Mohammad Ishfaqul Islam", "role": "", "bio": "", "img": "" },
+    { "name": "MD. Arifur Rahman", "role": "", "bio": "", "img": "" },
+    { "name": "Sayeed Omar", "role": "", "bio": "", "img": "" },
+    { "name": "Sayeed Abrar Aqil", "role": "", "bio": "", "img": "" },
+    { "name": "Thasinur Mohian", "role": "", "bio": "", "img": "" },
+    { "name": "Alim Shahriar", "role": "", "bio": "", "img": "" },
+    { "name": "MD. Minhaz Uddin", "role": "", "bio": "", "img": "" }
+  ],
+  "footer": "© 2026 Team Zero Byte · Drone Project"
+}
