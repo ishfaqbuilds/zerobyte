@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zero Byte — Our Drone Project</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0c0e;--card:#15171b;--line:#26292f;--fg:#f3f1ec;--mute:#9a9da3;--acc:#ff5a1f;--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 "Space Grotesk",system-ui,sans-serif;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:-1;opacity:.05;background:linear-gradient(var(--fg) 1px,transparent 1px) 0 0/100% 64px,linear-gradient(90deg,var(--fg) 1px,transparent 1px) 0 0/64px 100%;mask:radial-gradient(circle at 50% 40%,#000,transparent 75%)}
+a{color:inherit;text-decoration:none}
+section{max-width:1100px;margin:0 auto;padding:110px 20px}
+h1{font-size:clamp(2.6rem,7vw,5rem);line-height:1.05;letter-spacing:-.03em}
+h2{font-size:clamp(1.9rem,4vw,3rem);line-height:1.1;letter-spacing:-.02em;margin-bottom:16px}
+em{font-style:normal;color:var(--acc)}
+.tag{display:inline-block;font-size:.8rem;color:var(--acc);border:1px solid var(--acc);border-radius:99px;padding:2px 12px;margin-bottom:18px}
+.mute{color:var(--mute);max-width:56ch}
+.btn{display:inline-block;background:var(--acc);color:#111;font-weight:700;padding:13px 24px;border-radius:12px;transition:transform .2s}
+.btn:hover{transform:translateY(-2px)}
+.btn.ghost{background:none;color:var(--fg);border:1px solid var(--line)}
+
+#drone{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:none}
+.progress{position:fixed;inset:0 0 auto 0;height:3px;background:var(--acc);transform-origin:0 50%;transform:scaleX(0);z-index:20}
+
+nav{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:28px;padding:16px 20px;max-width:1100px;margin:0 auto;background:color-mix(in srgb,var(--bg) 80%,transparent);backdrop-filter:blur(10px)}
+nav b{font-size:1.2rem;margin-right:auto}
+nav a:not(.btn){color:var(--mute);font-size:.95rem;transition:color .2s}
+nav a:not(.btn):hover{color:var(--fg)}
+nav .btn{padding:8px 16px}
+@media(max-width:640px){nav a:not(.btn){display:none}}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;padding-top:40px;min-height:calc(100vh - 70px)}
+.hero-text{opacity:calc(1 - var(--s,0)*1.6);transform:translateY(calc(var(--s,0)*90px))}
+.hero p{margin:22px 0 30px}
+.hero .btn+.btn{margin-left:10px}
+.w{display:inline-block;overflow:hidden;vertical-align:bottom;padding-bottom:.08em}
+.w i{display:inline-block;font-style:normal;animation:rise .9s var(--ease) both;animation-delay:calc(var(--d)*90ms)}
+@keyframes rise{from{transform:translateY(110%)}}
+.fade{animation:fade 1s .6s both}
+@keyframes fade{from{opacity:0;transform:translateY(20px)}}
+.stage{position:relative;aspect-ratio:1}
+.pad{position:absolute;inset:40% 0 0 0;border-radius:28px;transform:translateY(calc(var(--s,0)*-50px));animation:fade 1s .2s both;background:
+  repeating-radial-gradient(circle at 30% 120%,transparent 0 22px,#ffffff30 22px 23px),
+  repeating-radial-gradient(circle at 90% -10%,transparent 0 30px,#ffffff22 30px 31px),var(--acc)}
+.shadow{position:absolute;left:25%;right:25%;bottom:9%;height:16px;border-radius:50%;background:#0007;filter:blur(8px);opacity:calc(1 - var(--s,0)*4);animation:shadow 4s ease-in-out infinite}
+@keyframes shadow{50%{transform:scale(.8)}}
+.scroll-hint{position:absolute;left:50%;bottom:18px;width:22px;height:36px;margin-left:-11px;border:2px solid var(--mute);border-radius:12px;opacity:calc(1 - var(--s,0)*6)}
+.scroll-hint::after{content:"";position:absolute;left:50%;top:6px;width:4px;height:8px;margin-left:-2px;border-radius:2px;background:var(--acc);animation:wheel 1.6s infinite}
+@keyframes wheel{to{transform:translateY(12px);opacity:0}}
+@media(max-width:800px){.hero{grid-template-columns:1fr;min-height:0}.scroll-hint{display:none}}
+
+/* scroll-driven text band */
+.band{overflow:hidden;border-block:1px solid var(--line);padding:18px 0;white-space:nowrap;font-weight:700;font-size:clamp(2.4rem,7vw,5.5rem);line-height:1.1;letter-spacing:-.02em}
+.band div{will-change:transform}
+.band div:first-child{color:transparent;-webkit-text-stroke:1px #4a4e57}
+.band div:last-child{color:#1d2025}
+.band span{color:var(--acc);-webkit-text-stroke:0;margin:0 .4em}
+
+/* about */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.slot{flex:none;width:240px;height:150px}
+.slot.big{width:auto;height:auto;aspect-ratio:4/3}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:60px}
+.stats div{border-left:2px solid var(--acc);padding-left:16px}
+.stats b{display:block;font-size:2.6rem;line-height:1.1}
+.stats small{color:var(--mute)}
+@media(max-width:800px){.split{grid-template-columns:1fr}}
+@media(max-width:640px){.stats{grid-template-columns:1fr 1fr}}
+
+/* pinned 360° explore */
+#explore{max-width:none;padding:0;height:340vh}
+.pin{position:sticky;top:0;height:100vh;overflow:hidden;text-align:center;padding:90px 20px 0}
+.ring{position:absolute;left:50%;top:74%;width:min(520px,76vw);height:64px;margin-left:calc(min(520px,76vw)/-2);border:2px solid var(--acc);border-radius:50%;background:radial-gradient(#ff5a1f33,transparent 70%)}
+.ring::after{content:"";position:absolute;inset:-14px -40px;border:1px dashed #ff5a1f66;border-radius:50%;animation:pulse 2.4s ease-out infinite}
+.deg{position:absolute;left:0;right:0;top:calc(74% + 84px);font-weight:700;font-size:1.3rem;color:var(--acc);font-variant-numeric:tabular-nums}
+.callout{position:absolute;width:230px;text-align:left;padding-left:14px;border-left:2px solid var(--acc);opacity:0;transform:translateY(24px);transition:opacity .5s,transform .5s var(--ease)}
+.callout.on{opacity:1;transform:none}
+.callout p{color:var(--mute);font-size:.9rem}
+.c1{left:7%;top:36%}.c2{right:7%;top:36%}.c3{left:7%;top:62%}.c4{right:7%;top:62%}
+@media(max-width:900px){
+  .callout{width:44vw;font-size:.85rem}.callout p{display:none}
+  .c1,.c2{top:27%}.c3,.c4{top:88%}.c1,.c3{left:4%}.c2,.c4{right:2%}
+}
+
+/* cards */
+.head{display:flex;justify-content:space-between;align-items:end;gap:20px}
+@media(max-width:700px){.head .slot{display:none}}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px}
+.card.reveal.in:hover{transform:translateY(-6px);border-color:var(--acc)}
+.card i{font-style:normal;color:var(--acc);font-weight:700}
+.card h3{margin:8px 0 6px}
+.card p{color:var(--mute);font-size:.95rem}
+.member{text-align:center}
+.avatar{width:84px;height:84px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;font-size:1.6rem;font-weight:700;color:#111;background:var(--acc);transition:transform .4s}
+.member:hover .avatar{transform:rotate(-8deg) scale(1.1)}
+.member img.avatar{object-fit:cover}
+
+/* landing */
+.landing{text-align:center;padding-bottom:60px}
+.land{position:relative;width:min(420px,84vw);aspect-ratio:4/3;margin:20px auto 30px}
+.land::before,.land::after{content:"";position:absolute;left:10%;right:10%;top:50%;height:22%;border:2px solid var(--acc);border-radius:50%}
+.land::after{animation:pulse 2.4s ease-out infinite}
+@keyframes pulse{to{transform:scale(1.6);opacity:0}}
+footer{text-align:center;color:var(--mute);padding:40px 20px;border-top:1px solid var(--line);font-size:.9rem}
+
+/* scroll reveal */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .8s,transform .8s var(--ease),border-color .25s;transition-delay:calc(var(--i,0)*90ms)}
+.reveal.left{transform:translateX(-70px)}
+.reveal.right{transform:translateX(70px)}
+.reveal.zoom{transform:scale(.8)}
+.reveal.flip{transform:perspective(800px) rotateX(40deg) translateY(50px);transform-origin:top}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="progress" id="bar"></div>
+<canvas id="drone" aria-hidden="true"></canvas>
+
+<nav>
+  <b>Zero <em>Byte</em></b>
+  <a href="#about">About</a><a href="#explore">Explore</a><a href="#features">Features</a><a href="#team">Team</a>
+  <a class="btn" href="#team">Meet the team</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-text">
+    <span class="tag fade">Our drone project</span>
+    <h1>
+      <span class="w"><i style="--d:0">Built</i></span> <span class="w"><i style="--d:1">to</i></span> <span class="w"><i style="--d:2">fly.</i></span><br>
+      <span class="w"><i style="--d:3"><em>Built</em></i></span> <span class="w"><i style="--d:4"><em>by</em></i></span> <span class="w"><i style="--d:5"><em>us.</em></i></span>
+    </h1>
+    <p class="mute fade">A quadcopter designed, wired, coded and test-flown by Team Zero Byte — from the first sketch to the first stable hover.</p>
+    <div class="fade"><a class="btn" href="#about">Explore the build</a><a class="btn ghost" href="#team">The team</a></div>
+  </div>
+  <div class="stage"><div class="pad"></div><div class="shadow"></div></div>
+  <div class="scroll-hint"></div>
+</section>
+
+<div class="band">
+  <div id="row1">ZERO BYTE<span>✦</span>DRONE PROJECT<span>✦</span>ZERO BYTE<span>✦</span>DRONE PROJECT<span>✦</span>ZERO BYTE<span>✦</span>DRONE PROJECT<span>✦</span>ZERO BYTE<span>✦</span>DRONE PROJECT</div>
+  <div id="row2">DESIGN<span>✦</span>BUILD<span>✦</span>CODE<span>✦</span>FLY<span>✦</span>DESIGN<span>✦</span>BUILD<span>✦</span>CODE<span>✦</span>FLY<span>✦</span>DESIGN<span>✦</span>BUILD<span>✦</span>CODE<span>✦</span>FLY<span>✦</span>DESIGN<span>✦</span>BUILD<span>✦</span>CODE<span>✦</span>FLY</div>
+</div>
+
+<section id="about">
+  <div class="split">
+    <div class="slot big"></div>
+    <div class="reveal right">
+      <span class="tag">About the project</span>
+      <h2>Engineered for performance.<br>Designed for <em>adventure.</em></h2>
+      <p class="mute">We set out to build a drone that is stable, smart and simple to fly. Every part — the frame, the flight controller tuning, the camera mount — was chosen, tested and refined by the team.</p>
+    </div>
+  </div>
+  <!-- EDIT: replace with your real numbers -->
+  <div class="stats">
+    <div class="reveal" style="--i:0"><b data-count="25">0</b><small>min flight time</small></div>
+    <div class="reveal" style="--i:1"><b data-count="60">0</b><small>km/h top speed</small></div>
+    <div class="reveal" style="--i:2"><b data-count="2">0</b><small>km control range</small></div>
+    <div class="reveal" style="--i:3"><b data-count="900">0</b><small>g take-off weight</small></div>
+  </div>
+</section>
+
+<section id="explore">
+  <div class="pin">
+    <span class="tag">360° view</span>
+    <h2>Explore every detail. <em>Keep scrolling.</em></h2>
+    <div class="ring"></div>
+    <div class="deg" id="deg">0°</div>
+    <!-- EDIT: replace with your real parts -->
+    <div class="callout c1"><h3>Brushless motors</h3><p>Four motors with two-blade props for lift and fast response.</p></div>
+    <div class="callout c2"><h3>Stabilised camera</h3><p>Nose-mounted gimbal keeps footage level in flight.</p></div>
+    <div class="callout c3"><h3>Lightweight frame</h3><p>Stiff X-layout arms and landing skids.</p></div>
+    <div class="callout c4"><h3>GPS &amp; battery</h3><p>Top-mounted GPS and a rear slide-in battery pack.</p></div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="head">
+    <div class="reveal left"><span class="tag">Features</span><h2>Every detail, <em>inside and out.</em></h2></div>
+    <div class="slot"></div>
+  </div>
+  <div class="grid" id="feature-grid"></div>
+</section>
+
+<section id="team">
+  <div class="head">
+    <div class="reveal left"><span class="tag">The team</span><h2>The people who <em>made it fly.</em></h2></div>
+    <div class="slot"></div>
+  </div>
+  <div class="grid" id="team-grid"></div>
+</section>
+
+<section class="landing">
+  <div class="reveal"><span class="tag">Touchdown</span><h2>Mission <em>complete.</em></h2></div>
+  <div class="land"></div>
+  <a class="btn reveal" href="#">Fly again ↑</a>
+</section>
+
+<footer>© 2026 Team Zero Byte · Drone Project</footer>
+
+<script>
+// EDIT: your features and team members. Add `role: "..."` or `img: "photo.jpg"` to a member.
+const features = [
+  ["Stable hover", "Tuned PID loops keep the drone locked in place, even in a breeze."],
+  ["GPS position hold", "Return-to-home and waypoint flight from onboard GPS."],
+  ["Stabilised camera", "A gimbal-mounted camera for smooth aerial footage."],
+  ["Custom frame", "Lightweight frame designed and assembled in-house."],
+  ["Live telemetry", "Battery, altitude and signal streamed to the ground in real time."],
+  ["Fail-safes", "Low-battery and signal-loss protection bring it home safely."],
+];
+const team = [
+  { name: "Mohammad Ishfaqul Islam" },
+  { name: "MD. Arifur Rahman" },
+  { name: "Sayeed Omar" },
+  { name: "Sayeed Abrar Aqil" },
+  { name: "Thasinur Mohian" },
+  { name: "Alim Shahriar" },
+  { name: "MD. Minhaz Uddin" },
+];
+
+const $ = id => document.getElementById(id);
+$("feature-grid").innerHTML = features.map(([t, d], i) =>
+  `<div class="card reveal flip" style="--i:${i % 3}"><i>0${i + 1}</i><h3>${t}</h3><p>${d}</p></div>`).join("");
+$("team-grid").innerHTML = team.map((m, i) => {
+  const initials = m.name.split(" ").map(w => w[0]).join("").slice(0, 2);
+  const avatar = m.img ? `<img class="avatar" src="${m.img}" alt="${m.name}">` : `<div class="avatar">${initials}</div>`;
+  return `<div class="card member reveal zoom" style="--i:${i % 4}">${avatar}<h3>${m.name}</h3><p>${m.role || "Team Zero Byte"}</p></div>`;
+}).join("");
+
+// reveal on scroll + count-up stats
+const io = new IntersectionObserver(entries => entries.forEach(e => {
+  if (!e.isIntersecting) return;
+  io.unobserve(e.target);
+  e.target.classList.add("in");
+  setTimeout(() => e.target.style.removeProperty("--i"), 1500); // drop stagger delay so hover is instant
+  const b = e.target.querySelector("[data-count]");
+  if (!b) return;
+  const end = +b.dataset.count, t0 = performance.now();
+  const tick = t => {
+    const p = Math.min((t - t0) / 1200, 1);
+    b.textContent = Math.round(end * (1 - (1 - p) ** 3));
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}), { threshold: .2 });
+document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+// scroll-linked: progress bar, hero parallax, text band, 360° callouts
+const hero = document.querySelector(".hero"), ex = $("explore"), calls = [...ex.querySelectorAll(".callout")];
+function onScroll() {
+  const s = scrollY, vh = innerHeight;
+  $("bar").style.transform = `scaleX(${s / (document.documentElement.scrollHeight - vh)})`;
+  hero.style.setProperty("--s", Math.min(s / vh, 1));
+  $("row1").style.transform = `translateX(${-s * .35}px)`;
+  $("row2").style.transform = `translateX(${s * .35 - 900}px)`;
+  const r = ex.getBoundingClientRect(), p = Math.min(Math.max(-r.top / (r.height - vh), 0), 1);
+  calls.forEach((c, i) => c.classList.toggle("on", p > .1 + i * .2));
+  $("deg").textContent = Math.round(p * 360) + "°";
+}
+addEventListener("scroll", onScroll, { passive: true });
+onScroll();
+</script>
+
+<!-- 3D drone. ponytail: three.js loads from a CDN, so the drone needs internet; download the two files locally if presenting offline. -->
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as T from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const renderer = new T.WebGLRenderer({ canvas: document.getElementById("drone"), alpha: true, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = T.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+const scene = new T.Scene();
+scene.environment = new T.PMREMGenerator(renderer).fromScene(new RoomEnvironment(renderer), .04).texture;
+const camera = new T.PerspectiveCamera(30, 1, .1, 50);
+camera.position.z = 10;
+const key = new T.DirectionalLight(0xffffff, 2.2); key.position.set(3, 5, 4); scene.add(key);
+const rim = new T.PointLight(0xff5a1f, 40); rim.position.set(-3, -1.5, 2); scene.add(rim);
+
+// ---- drone model (front faces +z, ~3.2 units wide) ----
+const rig = new T.Group(), drone = new T.Group();
+rig.add(drone); scene.add(rig);
+const mat = (color, o) => new T.MeshPhysicalMaterial({ color, roughness: .45, metalness: .1, ...o });
+const shell  = mat(0xf2f0eb, { roughness: .22, clearcoat: 1, clearcoatRoughness: .1 });
+const accent = mat(0xff5a1f, { roughness: .35, clearcoat: .6, envMapIntensity: .45 });
+const carbon = mat(0x16181c, { roughness: .5, metalness: .4 });
+const metal  = mat(0x9aa0aa, { roughness: .22, metalness: 1 });
+const glass  = mat(0x0b1430, { roughness: .03, metalness: 1, clearcoat: 1 });
+const bladeMat = mat(0x16181c, { transparent: true });
+const discMat = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, side: T.DoubleSide });
+
+const add = (geo, m, p = [0, 0, 0], r = [0, 0, 0], s = [1, 1, 1], parent = drone) => {
+  const mesh = new T.Mesh(geo, m);
+  mesh.position.set(...p); mesh.rotation.set(...r); mesh.scale.set(...s);
+  parent.add(mesh); return mesh;
+};
+const UP = new T.Vector3(0, 1, 0);
+const tube = (a, b, r, m, r2 = r) => {
+  const A = new T.Vector3(...a), d = new T.Vector3(...b).sub(A), len = d.length();
+  const mesh = add(new T.CylinderGeometry(r2, r, len, 20), m);
+  mesh.position.copy(A).addScaledVector(d, .5);
+  mesh.quaternion.setFromUnitVectors(UP, d.normalize());
+};
+const sphere = new T.SphereGeometry(1, 48, 32), cyl = (r, h) => new T.CylinderGeometry(r, r, h, 40);
+
+// body
+add(sphere, shell, [0, .02, 0], [0, 0, 0], [.6, .2, .98]);
+add(sphere, carbon, [0, -.07, 0], [0, 0, 0], [.52, .17, .9]);
+add(sphere, accent, [0, .1, .08], [0, 0, 0], [.4, .14, .58]);
+add(new T.BoxGeometry(.5, .16, .5), carbon, [0, .06, -.72]);                    // battery
+for (let i = 0; i < 4; i++) add(sphere, new T.MeshBasicMaterial({ color: 0x4dff88 }), [-.12 + i * .08, .1, -.975], [0, 0, 0], [.018, .018, .01]);
+add(cyl(.13, .05), carbon, [0, .215, -.3]);                                    // GPS puck
+for (const x of [-.2, .2]) add(sphere, glass, [x, .02, .9], [0, 0, 0], [.07, .05, .04]); // front sensors
+// camera gimbal
+add(new T.BoxGeometry(.34, .05, .1), carbon, [0, -.24, .6]);
+for (const x of [-.16, .16]) { add(new T.BoxGeometry(.03, .22, .08), carbon, [x, -.34, .6]); add(cyl(.05, .04), metal, [x, -.42, .6], [0, 0, Math.PI / 2]); }
+add(new T.BoxGeometry(.24, .2, .24), carbon, [0, -.42, .62]);
+add(cyl(.09, .1), carbon, [0, -.42, .78], [Math.PI / 2, 0, 0]);
+add(cyl(.095, .02), metal, [0, -.42, .835], [Math.PI / 2, 0, 0]);
+add(sphere, glass, [0, -.42, .83], [0, 0, 0], [.075, .075, .03]);
+// arms, motors, props, LEDs
+const props = [], leds = [];
+for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+  const m = [sx * 1.12, .04, sz * .92];
+  tube([sx * .38, 0, sz * .5], m, .085, carbon, .055);
+  add(cyl(.13, .17), carbon, [m[0], .1, m[2]]);
+  add(cyl(.136, .03), accent, [m[0], .06, m[2]]);
+  add(cyl(.11, .04), metal, [m[0], .2, m[2]]);
+  add(cyl(.03, .1), metal, [m[0], .25, m[2]]);
+  const p = new T.Group(); p.position.set(m[0], .27, m[2]); drone.add(p); props.push(p);
+  for (const s of [-1, 1]) add(new T.BoxGeometry(.5, .012, .095), bladeMat, [s * .28, 0, 0], [s * .28, 0, 0], [1, 1, 1], p);
+  add(new T.CircleGeometry(.54, 48), discMat, [0, .005, 0], [-Math.PI / 2, 0, 0], [1, 1, 1], p);
+  leds.push(add(sphere, new T.MeshBasicMaterial({ color: sz > 0 ? 0xff3030 : 0x4dff88 }), [m[0], -.06, m[2]], [0, 0, 0], [.04, .03, .04]));
+}
+// landing gear
+for (const sx of [-1, 1]) {
+  tube([sx * .52, -.64, -.6], [sx * .52, -.64, .6], .032, carbon);
+  for (const sz of [-1, 1]) {
+    tube([sx * .3, -.12, sz * .32], [sx * .52, -.64, sz * .42], .03, carbon);
+    add(sphere, accent, [sx * .52, -.64, sz * .6], [0, 0, 0], [.05, .05, .07]);
+  }
+}
+
+// ---- scroll choreography: each keyframe pins the drone to a page element ----
+const TAU = Math.PI * 2;
+const defs = [
+  { el: ".stage",          k: .95, ry: -.5,       rx: .22 },
+  { el: "#about .slot",    k: .95, ry: .8,        rx: .3 },
+  { ex: 0,                 k: 1,   ry: 0,         rx: .12, linear: true },
+  { ex: 1,                 k: 1,   ry: TAU,       rx: .7 },
+  { el: "#features .slot", k: 1,   ry: TAU + .6,  rx: .3 },
+  { el: "#team .slot",     k: 1,   ry: TAU - .6,  rx: .3 },
+  { el: ".land",           k: .8,  ry: TAU + .4,  rx: .2, power: 0 },
+];
+let kfs = [], halfW = 1, halfH = Math.tan(15 * Math.PI / 180) * 10;
+function layout() {
+  const vw = innerWidth, vh = innerHeight, max = document.documentElement.scrollHeight - vh;
+  renderer.setSize(vw, vh, false);
+  camera.aspect = vw / vh; camera.updateProjectionMatrix();
+  halfW = halfH * vw / vh;
+  const ex = document.getElementById("explore").getBoundingClientRect();
+  kfs = defs.flatMap(d => {
+    if ("ex" in d) return { power: 1, ...d, S: ex.top + scrollY + d.ex * (ex.height - vh), cx: vw / 2, cy: vh * .52, w: Math.min(vw * .7, 600) * d.k };
+    const r = document.querySelector(d.el).getBoundingClientRect();
+    if (!r.width) return [];                                        // slot hidden on small screens
+    const docY = r.top + scrollY + r.height / 2;
+    // two keyframes per element so the drone rides along with it while it crosses the viewport
+    return [.7, .2].map((at, i) => {
+      const S = Math.min(Math.max(docY - vh * at, 0), max);
+      return { power: 1, ...d, ry: d.ry + i * .3, S, cx: r.left + r.width / 2, cy: docY - S, w: r.width * d.k };
+    });
+  }).sort((a, b) => a.S - b.S);
+}
+new ResizeObserver(layout).observe(document.body);
+addEventListener("resize", layout);
+layout();
+
+function target(s) {
+  const first = kfs[0], last = kfs[kfs.length - 1];
+  if (s <= first.S) return { ...first, cy: first.cy + first.S - s };
+  if (s >= last.S) return { ...last, cy: last.cy + last.S - s };
+  let i = 0; while (kfs[i + 1].S <= s) i++;
+  const a = kfs[i], b = kfs[i + 1];
+  let f = (s - a.S) / (b.S - a.S || 1);
+  if (!a.linear) f = f * f * (3 - 2 * f);
+  const out = {};
+  for (const k of ["cx", "cy", "w", "ry", "rx", "power"]) out[k] = a[k] + (b[k] - a[k]) * f;
+  return out;
+}
+
+let mx = 0, my = 0, bank = 0, prev = 0;
+addEventListener("pointermove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; });
+const cur = { x: halfW + 4, y: halfH + 2, sc: .3, ry: -3, rx: .8, power: 1 };   // starts off-screen, flies in
+
+function frame(t) {
+  requestAnimationFrame(frame);
+  const dt = Math.min((t - prev) / 1000, .05) || .016; prev = t;
+  const g = target(scrollY), vw = innerWidth, vh = innerHeight;
+  const to = { x: (g.cx / vw * 2 - 1) * halfW, y: (1 - g.cy / vh * 2) * halfH, sc: g.w / vw * 2 * halfW / 3.7, ry: g.ry, rx: g.rx, power: g.power };
+  const a = reduce ? 1 : 1 - Math.exp(-dt * 4.5), x0 = cur.x;
+  for (const k in to) cur[k] += (to[k] - cur[k]) * a;
+  const lean = Math.max(-.5, Math.min(.5, -(cur.x - x0) / dt * .12));           // bank into sideways travel
+  bank += (lean - bank) * a;
+  const hov = reduce ? 0 : cur.power;
+  rig.position.set(cur.x, cur.y + Math.sin(t / 600) * .07 * hov * cur.sc, 0);
+  rig.scale.setScalar(cur.sc);
+  rig.rotation.set(cur.rx + my * .15 * hov, 0, bank + Math.sin(t / 900) * .035 * hov);
+  drone.rotation.y = cur.ry + mx * .4 * hov;
+  props.forEach((p, i) => p.rotation.y += (i % 2 ? 1 : -1) * (.04 + .9 * cur.power) * dt * 60);
+  bladeMat.opacity = 1 - .7 * cur.power;
+  discMat.opacity = .1 * cur.power;
+  leds.forEach((l, i) => l.visible = (t + i * 300) % 1200 < 700);
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
